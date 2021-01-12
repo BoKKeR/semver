@@ -1,7 +1,39 @@
 version: 2.1
 orbs:
   node: circleci/node@3.0.0
+
+jobs:
+  test_node:
+    docker:
+      - image: circleci/node:8
+    steps:
+      - checkout
+      - run:
+          name: installing node_modules
+          command: npm ci
+      - run:
+          name: jest tests
+          command: 'npm run test:ci -- --forceExit'
+          environment:
+            JEST_JUNIT_OUTPUT: test-results/jest/junit.xml
+      
+  release:
+    docker:
+      - image: circleci/node:8
+    steps:
+      - checkout
+      - run: npm install
+      # Run optional required steps before releasing
+      # - run: npm run build-script
+      - run: npx semantic-release
+
+
 workflows:
-  node-tests:
-    jobs:
-      - node/test
+  version: 2
+  test_and_release:
+      # Run the test jobs first, then the release only when all the test jobs are successful
+      jobs:
+        - test_node
+        - release:
+            requires:
+              - test_node
